@@ -260,52 +260,102 @@ export default function CollectPage() {
         </form>
       </div>
 
-      {/* Date Picker Modal */}
+      {/* Date Picker Modal - Scroll Wheel Style */}
       {datePicker && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={()=>setDatePicker(null)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={()=>setDatePicker(null)}>
           <div className="bg-white rounded-t-2xl w-full max-w-md" onClick={e=>e.stopPropagation()}>
+            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <button type="button" onClick={removeDate} className="text-sm text-red-500 px-2 py-1">移除</button>
-              <span className="text-sm font-medium text-gray-700">选择日期</span>
-              <button type="button" onClick={confirmDate} className="text-sm text-primary-500 font-medium px-2 py-1">确定</button>
+              <button type="button" onClick={()=>setDatePicker(null)} className="text-sm text-gray-400 px-2 py-1">取消</button>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={removeDate} className="text-sm text-red-500 px-2 py-1">移除</button>
+                <button type="button" onClick={confirmDate} className="text-sm text-primary-500 font-semibold px-2 py-1">确定</button>
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-2 py-4 px-4">
-              {/* Year */}
-              <div className="flex-1">
-                <div className="text-xs text-gray-400 text-center mb-1">年</div>
-                <div className="h-40 overflow-y-auto rounded-lg border border-gray-200">
+
+            {/* Field label */}
+            <div className="text-center py-2">
+              <span className="text-sm font-medium text-gray-700">
+                {datePicker.field==='birthday'?'出生日期':datePicker.field==='idValidFrom'?'身份证有效期限起始日期':datePicker.field==='idValidTo'?'身份证有效期限截止日期':datePicker.field==='driverLicenseFrom'?'驾驶证有效期起':datePicker.field==='driverLicenseTo'?'驾驶证有效期至':datePicker.field==='visaValidFrom'?'签证有效期起':datePicker.field==='visaValidTo'?'签证有效期止':datePicker.field==='passportExpiry'?'护照有效期止':datePicker.field==='lastEntryUS'?'最近一次入境美国时间':'选择日期'}
+              </span>
+            </div>
+
+            {/* Scroll wheels */}
+            <div className="flex items-center justify-center px-4 pb-6 relative">
+              {/* Selection highlight bar */}
+              <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-10 bg-gray-50 rounded-lg pointer-events-none border border-gray-100" style={{zIndex:0}}/>
+
+              {/* Year wheel */}
+              <div className="flex-1 relative" style={{zIndex:1}}>
+                <div className="h-40 overflow-y-auto scroll-smooth snap-y snap-mandatory" style={{scrollPaddingTop:'60px',scrollPaddingBottom:'60px'}}
+                  onScroll={e=>{
+                    const el=e.currentTarget; const items=el.querySelectorAll('[data-y]')
+                    const center=el.scrollTop+80
+                    let closest=0; let minDist=Infinity
+                    items.forEach((it,idx)=>{const d=Math.abs((it as HTMLElement).offsetTop+20-center); if(d<minDist){minDist=d;closest=idx}})
+                    const val=parseInt(items[closest]?.getAttribute('data-y')||'0')
+                    if(val && datePicker && val!==datePicker.year) setDatePicker(p=>p?{...p,year:val}:null)
+                  }}>
+                  <div className="h-16"/>{/* spacer */}
                   {Array.from({length:100},(_,k)=>2025-k).map(y=>(
-                    <button key={y} type="button" onClick={()=>setDatePicker(p=>p?{...p,year:y}:null)}
-                      className={`w-full py-2 text-sm text-center ${datePicker.year===y?'bg-primary-500 text-white font-medium':'text-gray-700 hover:bg-gray-50'}`}>
+                    <div key={y} data-y={y} className={`h-10 flex items-center justify-center text-base snap-center transition-all ${datePicker.year===y?'text-gray-900 font-bold text-lg':'text-gray-300'}`}>
                       {y}
-                    </button>
+                    </div>
                   ))}
+                  <div className="h-16"/>{/* spacer */}
                 </div>
               </div>
-              {/* Month */}
-              <div className="flex-1">
-                <div className="text-xs text-gray-400 text-center mb-1">月</div>
-                <div className="h-40 overflow-y-auto rounded-lg border border-gray-200">
+
+              {/* Year label */}
+              <span className="text-xs text-gray-400 mx-1 relative" style={{zIndex:1}}>年</span>
+
+              {/* Month wheel */}
+              <div className="flex-1 relative" style={{zIndex:1}}>
+                <div className="h-40 overflow-y-auto scroll-smooth snap-y snap-mandatory" style={{scrollPaddingTop:'60px',scrollPaddingBottom:'60px'}}
+                  onScroll={e=>{
+                    const el=e.currentTarget; const items=el.querySelectorAll('[data-m]')
+                    const center=el.scrollTop+80
+                    let closest=0; let minDist=Infinity
+                    items.forEach((it,idx)=>{const d=Math.abs((it as HTMLElement).offsetTop+20-center); if(d<minDist){minDist=d;closest=idx}})
+                    const val=parseInt(items[closest]?.getAttribute('data-m')||'0')
+                    if(val && datePicker && val!==datePicker.month) setDatePicker(p=>p?{...p,month:val}:null)
+                  }}>
+                  <div className="h-16"/>
                   {Array.from({length:12},(_,k)=>k+1).map(m=>(
-                    <button key={m} type="button" onClick={()=>setDatePicker(p=>p?{...p,month:m}:null)}
-                      className={`w-full py-2 text-sm text-center ${datePicker.month===m?'bg-primary-500 text-white font-medium':'text-gray-700 hover:bg-gray-50'}`}>
-                      {m}月
-                    </button>
+                    <div key={m} data-m={m} className={`h-10 flex items-center justify-center text-base snap-center transition-all ${datePicker.month===m?'text-gray-900 font-bold text-lg':'text-gray-300'}`}>
+                      {String(m).padStart(2,'0')}
+                    </div>
                   ))}
+                  <div className="h-16"/>
                 </div>
               </div>
-              {/* Day */}
-              <div className="flex-1">
-                <div className="text-xs text-gray-400 text-center mb-1">日</div>
-                <div className="h-40 overflow-y-auto rounded-lg border border-gray-200">
+
+              {/* Month label */}
+              <span className="text-xs text-gray-400 mx-1 relative" style={{zIndex:1}}>月</span>
+
+              {/* Day wheel */}
+              <div className="flex-1 relative" style={{zIndex:1}}>
+                <div className="h-40 overflow-y-auto scroll-smooth snap-y snap-mandatory" style={{scrollPaddingTop:'60px',scrollPaddingBottom:'60px'}}
+                  onScroll={e=>{
+                    const el=e.currentTarget; const items=el.querySelectorAll('[data-d]')
+                    const center=el.scrollTop+80
+                    let closest=0; let minDist=Infinity
+                    items.forEach((it,idx)=>{const d=Math.abs((it as HTMLElement).offsetTop+20-center); if(d<minDist){minDist=d;closest=idx}})
+                    const val=parseInt(items[closest]?.getAttribute('data-d')||'0')
+                    if(val && datePicker && val!==datePicker.day) setDatePicker(p=>p?{...p,day:val}:null)
+                  }}>
+                  <div className="h-16"/>
                   {Array.from({length:daysInMonth(datePicker.year,datePicker.month)},(_,k)=>k+1).map(d=>(
-                    <button key={d} type="button" onClick={()=>setDatePicker(p=>p?{...p,day:d}:null)}
-                      className={`w-full py-2 text-sm text-center ${datePicker.day===d?'bg-primary-500 text-white font-medium':'text-gray-700 hover:bg-gray-50'}`}>
-                      {d}
-                    </button>
+                    <div key={d} data-d={d} className={`h-10 flex items-center justify-center text-base snap-center transition-all ${datePicker.day===d?'text-gray-900 font-bold text-lg':'text-gray-300'}`}>
+                      {String(d).padStart(2,'0')}
+                    </div>
                   ))}
+                  <div className="h-16"/>
                 </div>
               </div>
+
+              {/* Day label */}
+              <span className="text-xs text-gray-400 mx-1 relative" style={{zIndex:1}}>日</span>
             </div>
           </div>
         </div>
