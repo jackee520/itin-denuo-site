@@ -103,19 +103,25 @@ export default function CollectPage() {
 
   const up = (k: keyof FormData, v: any) => { setForm(p=>({...p,[k]:v})); setErrors([]) }
 
-  const validate = (): boolean => {
-    const reqs = requiredFields[tab] || []
+  const validateTab = (tabId: string): boolean => {
+    const reqs = requiredFields[tabId] || []
     const labels: Record<string,string> = {name:'姓名',gender:'性别',birthday:'出生日期',country:'国家',idAddress:'证件住址',zipCode:'邮编',appliedBefore:'是否申请过税号',hasUSAddress:'是否有美国地址',mailingAddress:'邮寄地址',liveCountry:'现居国家',birthProvince:'出生省份',phone:'电话号码',email:'Email'}
     const missing = reqs.filter(f => !form[f] || (typeof form[f]==='string' && !(form[f] as string).trim()))
     if (missing.length > 0) { setErrors(missing.map(f=>labels[f]||f)); return false }
     return true
   }
 
-  const next = () => { if (!validate()) return; const i = tabs.findIndex(t=>t.id===tab); if (i < tabs.length-1) setTab(tabs[i+1].id) }
+  const next = () => {
+    if (!validateTab(tab)) return
+    const i = tabs.findIndex(t=>t.id===tab)
+    if (i < tabs.length-1) { setTab(tabs[i+1].id); setErrors([]) }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    for (const t of tabs) { if (requiredFields[t.id]) { setTab(t.id); if (!validate()) return } }
+    for (const t of tabs) {
+      if (!validateTab(t.id)) { setTab(t.id); return }
+    }
     setSubmitting(true)
     const payload = { ...form, submittedAt: new Date().toISOString() }
     try { await fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ access_key:WEB3FORMS_KEY, subject:`📝 新的信息收集 - ${form.name||'未填姓名'}`, from_name:'德诺商务 信息收集表', ...payload }) }) } catch {}
@@ -237,7 +243,7 @@ export default function CollectPage() {
             </div>
           )}
 
-          {tab==='id' && <IdTab form={form} up={up} files={files} handleFile={handleFile} toPinyin={toPinyin} splitAddress={splitAddress} translateAddress={translateAddress} openDatePicker={openDatePicker}/>}
+          {tab==='id' && <IdTab form={form} up={up} files={files} handleFile={handleFile} splitAddress={splitAddress} openDatePicker={openDatePicker}/>}
           {tab==='visa' && <VisaTab form={form} up={up} files={files} handleFile={handleFile} openDatePicker={openDatePicker}/>}
           {tab==='passport' && <PassportTab form={form} up={up} files={files} handleFile={handleFile} openDatePicker={openDatePicker}/>}
           {tab==='other' && <OtherTab form={form} up={up} toggleP={toggleP} files={files} handleFile={handleFile} openDatePicker={openDatePicker}/>}
@@ -408,9 +414,9 @@ function FileUp({label,onChange,required=false}:{label:string;onChange:(f:File|n
 
 // ---- Tab sections ----
 
-function IdTab({form,up,files,handleFile,toPinyin,splitAddress,translateAddress,openDatePicker}:{
+function IdTab({form,up,files,handleFile,splitAddress,openDatePicker}:{
   form:FormData;up:(k:keyof FormData,v:any)=>void;files:FileState;handleFile:(k:keyof FileState,f:File|null)=>void
-  toPinyin:()=>void;splitAddress:()=>void;translateAddress:()=>void;openDatePicker:(f:keyof FormData)=>void
+  splitAddress:()=>void;openDatePicker:(f:keyof FormData)=>void
 }) {
   return <div className="space-y-4">
     {/* Warning - match chuhaiji style: bold text, no background */}
@@ -443,22 +449,12 @@ function IdTab({form,up,files,handleFile,toPinyin,splitAddress,translateAddress,
     <Sel label="性别" value={form.gender} onChange={v=>up('gender',v)} options={['男','女']} r/>
 
     <div className="flex gap-3">
-      <Btn onClick={toPinyin}>姓名转拼音</Btn>
       <Btn onClick={splitAddress}>拆分地址</Btn>
     </div>
-    {form.namePinyin && <p className="text-xs text-blue-500">拼音：{form.namePinyin}</p>}
 
     <I label="国家" value={form.country} onChange={v=>up('country',v)} ph="中国" r/>
     <I label="证件住址" value={form.idAddress} onChange={v=>up('idAddress',v)} ph="住址" r/>
     <I label="邮编" value={form.zipCode} onChange={v=>up('zipCode',v)} ph="请填写文本内容" r/>
-
-    <div>
-      <span className="text-sm text-gray-500 block mb-1">地址转英文</span>
-      <Btn onClick={translateAddress}>翻译地址</Btn>
-      {form.province && form.province.match(/[\u4e00-\u9fff]/)===null && (
-        <span className="ml-2 text-xs text-green-600">✓ 已翻译</span>
-      )}
-    </div>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <I label="省" value={form.province} onChange={v=>up('province',v)} ph="请填写文本内容"/>
