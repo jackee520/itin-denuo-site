@@ -40,12 +40,15 @@ const tabs = [
 ]
 const purposeOpts = ['个人报税','夫妻联合报税','申请美卡','跨境电商','其他']
 
+// ⚠️ 替换为你的 Web3Forms Access Key
+// 获取方式：打开 https://web3forms.com → 输入 jackeeyu520@gmail.com → 验证邮箱 → 复制 Access Key
+const WEB3FORMS_KEY = 'YOUR_WEB3FORMS_ACCESS_KEY'
+
 export default function CollectPage() {
   const [tab, setTab] = useState('basic')
   const [form, setForm] = useState<FormData>(empty)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
-  const [webhookUrl, setWebhookUrl] = useState('')
 
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get('ref')
@@ -53,8 +56,6 @@ export default function CollectPage() {
       localStorage.setItem('ref_code', ref)
       setForm(p => ({ ...p, refCode: ref }))
     }
-    // Load webhook URL from config
-    fetch('/config.json').then(r=>r.json()).then(d=>setWebhookUrl(d.webhookUrl||'')).catch(()=>{})
   }, [])
 
   const up = (k: keyof FormData, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -68,19 +69,23 @@ export default function CollectPage() {
 
     const payload = { ...form, submittedAt: new Date().toISOString() }
 
-    // Try webhook (Google Sheets / n8n / any endpoint)
-    if (webhookUrl) {
+    // Send to Web3Forms → arrives in your email
+    if (WEB3FORMS_KEY !== 'YOUR_WEB3FORMS_ACCESS_KEY') {
       try {
-        await fetch(webhookUrl, {
+        await fetch('https://api.web3forms.com/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          mode: 'no-cors',
+          body: JSON.stringify({
+            access_key: WEB3FORMS_KEY,
+            subject: `📝 新的信息收集 - ${form.name || '未填姓名'}`,
+            from_name: '德诺商务 信息收集表',
+            ...payload,
+          }),
         })
       } catch {}
     }
 
-    // Also save to localStorage as backup
+    // Also save locally as backup
     const key = 'itin_submissions'
     const existing = JSON.parse(localStorage.getItem(key) || '[]')
     existing.push(payload)
@@ -169,7 +174,7 @@ export default function CollectPage() {
   )
 }
 
-// --- Section components ---
+// --- Helper components ---
 
 function L({children}:{children:React.ReactNode}) {
   return <label className="block text-sm font-medium text-gray-700 mb-1">{children}</label>
@@ -189,7 +194,7 @@ function R({label,value,onChange,options}:{label:string;value:string;onChange:(v
     )}</div></div>
 }
 
-function BasicSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>void}) {
+function BasicSection({form,up}:{form:FormData;up:(k:keyof FormData,v:any)=>void}) {
   return <div className="space-y-4">
     <h3 className="font-semibold text-lg">👤 基本信息</h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -208,10 +213,10 @@ function BasicSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>voi
   </div>
 }
 
-function IdSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>void}) {
+function IdSection({form,up}:{form:FormData;up:(k:keyof FormData,v:any)=>void}) {
   return <div className="space-y-4">
     <h3 className="font-semibold text-lg">🪪 证件信息</h3>
-    <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">⚠️ 身份证和驾驶证至少上传一样</p>
+    <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">⚠️ 身份证和驾驶证至少填写一样</p>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <F label="身份证号码" value={form.idNumber} onChange={v=>up('idNumber',v)} ph="身份证号码"/>
       <F label="签发机关" value={form.idIssuer} onChange={v=>up('idIssuer',v)} ph="签发机关"/>
@@ -235,7 +240,7 @@ function IdSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>void})
   </div>
 }
 
-function VisaSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>void}) {
+function VisaSection({form,up}:{form:FormData;up:(k:keyof FormData,v:any)=>void}) {
   return <div className="space-y-4">
     <h3 className="font-semibold text-lg">✈️ 签证信息</h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -247,7 +252,7 @@ function VisaSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>void
   </div>
 }
 
-function PassportSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>void}) {
+function PassportSection({form,up}:{form:FormData;up:(k:keyof FormData,v:any)=>void}) {
   return <div className="space-y-4">
     <h3 className="font-semibold text-lg">📕 护照信息</h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -258,7 +263,7 @@ function PassportSection({form,up}:{form:FormData;up:(k: keyof FormData,v:any)=>
   </div>
 }
 
-function OtherSection({form,up,toggleP}:{form:FormData;up:(k: keyof FormData,v:any)=>void;toggleP:(p:string)=>void}) {
+function OtherSection({form,up,toggleP}:{form:FormData;up:(k:keyof FormData,v:any)=>void;toggleP:(p:string)=>void}) {
   return <div className="space-y-5">
     <h3 className="font-semibold text-lg">📋 其他信息</h3>
     <R label="是否申请过税号 *" value={form.appliedBefore} onChange={v=>up('appliedBefore',v)} options={['是','否']}/>
