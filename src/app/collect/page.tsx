@@ -413,7 +413,7 @@ function IdTab({form,up,files,handleFile,toPinyin,splitAddress,translateAddress,
   toPinyin:()=>void;splitAddress:()=>void;translateAddress:()=>void;openDatePicker:(f:keyof FormData)=>void
 }) {
   return <div className="space-y-4">
-    {/* Warning */}
+    {/* Warning - match chuhaiji style: bold text, no background */}
     <p className="text-sm font-bold text-gray-900">身份证和驾驶证至少上传一样！</p>
 
     {/* Upload areas - 3 columns on desktop, 1 column on mobile */}
