@@ -116,7 +116,7 @@ export default function CollectPage() {
   const next = () => {
     if (!validateTab(tab)) return
     const i = tabs.findIndex(t=>t.id===tab)
-    if (i < tabs.length-1) { setTab(tabs[i+1].id); setErrors([]) }
+    if (i < tabs.length-1) { setTab(tabs[i+1].id); setErrors([]); window.scrollTo(0, 0) }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,15 +129,29 @@ export default function CollectPage() {
     let web3Success = false
     let errorMsg = ''
     try {
+      // Use FormData for file upload support
+      const formData = new FormData()
+      formData.append('_subject', `📝 新的信息收集 - ${form.name || '未填姓名'}`)
+      formData.append('_template', 'table')
+      formData.append('_captcha', 'false')
+      // Add all form fields
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          formData.append(key, String(value))
+        }
+      })
+      // Add files
+      if (files.idFront) formData.append('身份证正面', files.idFront)
+      if (files.idBack) formData.append('身份证背面', files.idBack)
+      if (files.driverLicense) formData.append('驾驶证', files.driverLicense)
+      if (files.visaPhoto) formData.append('签证照片', files.visaPhoto)
+      if (files.passport) formData.append('护照', files.passport)
+      if (files.otherDocs) formData.append('其他附件', files.otherDocs)
+
       const res = await fetch(FORMSUBMIT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          _subject: `📝 新的信息收集 - ${form.name || '未填姓名'}`,
-          _template: 'table',
-          _captcha: 'false',
-          ...payload
-        })
+        headers: { 'Accept': 'application/json' },
+        body: formData
       })
       const data = await res.json()
       web3Success = data.success === true || data.success === 'true'
@@ -268,7 +282,7 @@ export default function CollectPage() {
           {/* Tabs */}
           <div className="flex gap-5 mb-5 border-b border-gray-200 overflow-x-auto">
             {tabs.map(t=>(
-              <button key={t.id} type="button" onClick={()=>{setTab(t.id);setErrors([])}}
+              <button key={t.id} type="button" onClick={()=>{setTab(t.id);setErrors([]);window.scrollTo(0,0)}}
                 className={`pb-2.5 text-sm whitespace-nowrap border-b-2 transition-all ${
                   tab===t.id ? 'text-gray-900 border-blue-500 font-medium' : 'text-gray-400 border-transparent'
                 }`}>{t.label}</button>
@@ -287,7 +301,7 @@ export default function CollectPage() {
           {tab==='other' && <OtherTab form={form} up={up} toggleP={toggleP} files={files} handleFile={handleFile} openDatePicker={openDatePicker}/>}
 
           <div className="flex items-center justify-between mt-6">
-            <button type="button" onClick={()=>{setTab(tabs[Math.max(0,i-1)].id);setErrors([])}} disabled={i===0}
+            <button type="button" onClick={()=>{setTab(tabs[Math.max(0,i-1)].id);setErrors([]);window.scrollTo(0,0)}} disabled={i===0}
               className="px-4 py-2.5 text-gray-500 text-sm disabled:opacity-30">← 上一步</button>
             {i < tabs.length-1 ? (
               <button type="button" onClick={next} className="px-6 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-medium">下一步 →</button>
@@ -336,7 +350,7 @@ export default function CollectPage() {
                     if(val && datePicker && val!==datePicker.year) setDatePicker(p=>p?{...p,year:val}:null)
                   }}>
                   <div className="h-16"/>{/* spacer */}
-                  {Array.from({length:100},(_,k)=>2025-k).map(y=>(
+                  {Array.from({length:120},(_,k)=>2030-k).map(y=>(
                     <div key={y} data-y={y} className={`h-10 flex items-center justify-center text-base snap-center transition-all ${datePicker.year===y?'text-gray-900 font-bold text-lg':'text-gray-300'}`}>
                       {y}
                     </div>
@@ -486,13 +500,13 @@ function IdTab({form,up,files,handleFile,splitAddress,openDatePicker}:{
     <I label="姓名" value={form.name} onChange={v=>up('name',v)} ph="姓名" r/>
     <Sel label="性别" value={form.gender} onChange={v=>up('gender',v)} options={['男','女']} r/>
 
-    <div className="flex gap-3">
-      <Btn onClick={splitAddress}>拆分地址</Btn>
-    </div>
-
     <I label="国家" value={form.country} onChange={v=>up('country',v)} ph="中国" r/>
     <I label="证件住址" value={form.idAddress} onChange={v=>up('idAddress',v)} ph="住址" r/>
     <I label="邮编" value={form.zipCode} onChange={v=>up('zipCode',v)} ph="请填写文本内容" r/>
+
+    <div className="flex gap-3">
+      <Btn onClick={splitAddress}>拆分地址</Btn>
+    </div>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <I label="省" value={form.province} onChange={v=>up('province',v)} ph="请填写文本内容"/>
