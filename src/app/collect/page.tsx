@@ -54,6 +54,7 @@ const requiredFields: Record<string, (keyof FormData)[]> = {
 }
 
 const WEB3FORMS_KEY = 'd6ea2243-f877-4061-aaf6-f4fb86f1ea7c'
+const FORMSUBMIT_URL = 'https://formsubmit.co/ajax/jackeeyu520@gmail.com'
 
 // Province/City/District English mapping
 const provinceEn: Record<string,string> = {
@@ -128,18 +129,18 @@ export default function CollectPage() {
     let web3Success = false
     let errorMsg = ''
     try {
-      const res = await fetch('https://api.web3forms.com/submit', {
+      const res = await fetch(FORMSUBMIT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
-          access_key: WEB3FORMS_KEY,
-          subject: `📝 新的信息收集 - ${form.name || '未填姓名'}`,
-          from_name: '德诺商务 信息收集表',
+          _subject: `📝 新的信息收集 - ${form.name || '未填姓名'}`,
+          _template: 'table',
+          _captcha: 'false',
           ...payload
         })
       })
       const data = await res.json()
-      web3Success = data.success === true
+      web3Success = data.success === true || data.success === 'true'
       if (!web3Success) errorMsg = data.message || '提交失败'
     } catch (err: any) {
       errorMsg = err.message || '网络错误'
