@@ -121,8 +121,23 @@ export default function CollectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Validate ALL tabs, collect errors, don't switch tabs during validation
+    const labels: Record<string,string> = {name:'姓名',gender:'性别',birthday:'出生日期',country:'国家',idAddress:'证件住址',zipCode:'邮编',appliedBefore:'是否申请过税号',hasUSAddress:'是否有美国地址',mailingAddress:'邮寄地址',liveCountry:'现居国家',birthProvince:'出生省份',phone:'电话号码',email:'Email'}
+    const allErrors: string[] = []
+    let firstErrorTab = ''
     for (const t of tabs) {
-      if (!validateTab(t.id)) { setTab(t.id); return }
+      const reqs = requiredFields[t.id] || []
+      const missing = reqs.filter(f => !form[f] || (typeof form[f]==='string' && !(form[f] as string).trim()))
+      if (missing.length > 0) {
+        allErrors.push(...missing.map(f=>labels[f]||f))
+        if (!firstErrorTab) firstErrorTab = t.id
+      }
+    }
+    if (allErrors.length > 0) {
+      setErrors(allErrors)
+      setTab(firstErrorTab)
+      window.scrollTo(0, 0)
+      return
     }
     setSubmitting(true)
     const payload = { ...form, submittedAt: new Date().toISOString() }
@@ -141,12 +156,12 @@ export default function CollectPage() {
         }
       })
       // Add files
-      if (files.idFront) formData.append('身份证正面', files.idFront)
-      if (files.idBack) formData.append('身份证背面', files.idBack)
-      if (files.driverLicense) formData.append('驾驶证', files.driverLicense)
-      if (files.visaPhoto) formData.append('签证照片', files.visaPhoto)
-      if (files.passport) formData.append('护照', files.passport)
-      if (files.otherDocs) formData.append('其他附件', files.otherDocs)
+      if (files.idFront) formData.append('ID_Front', files.idFront)
+      if (files.idBack) formData.append('ID_Back', files.idBack)
+      if (files.driverLicense) formData.append('Drivers_License', files.driverLicense)
+      if (files.visaPhoto) formData.append('Visa_Photo', files.visaPhoto)
+      if (files.passport) formData.append('Passport', files.passport)
+      if (files.otherDocs) formData.append('Other_Documents', files.otherDocs)
 
       const res = await fetch(FORMSUBMIT_URL, {
         method: 'POST',
