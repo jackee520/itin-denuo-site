@@ -89,6 +89,7 @@ export default function CollectPage() {
   const [files, setFiles] = useState<FileState>(emptyFiles)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{success:boolean;error:string}>({success:false,error:''})
   const [errors, setErrors] = useState<string[]>([])
   const [datePicker, setDatePicker] = useState<{field:keyof FormData;year:number;month:number;day:number}|null>(null)
 
@@ -124,9 +125,33 @@ export default function CollectPage() {
     }
     setSubmitting(true)
     const payload = { ...form, submittedAt: new Date().toISOString() }
-    try { await fetch('https://api.web3forms.com/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ access_key:WEB3FORMS_KEY, subject:`📝 新的信息收集 - ${form.name||'未填姓名'}`, from_name:'德诺商务 信息收集表', ...payload }) }) } catch {}
-    const key='itin_submissions'; const existing=JSON.parse(localStorage.getItem(key)||'[]'); existing.push(payload); localStorage.setItem(key,JSON.stringify(existing))
-    setSubmitting(false); setDone(true)
+    let web3Success = false
+    let errorMsg = ''
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: `📝 新的信息收集 - ${form.name || '未填姓名'}`,
+          from_name: '德诺商务 信息收集表',
+          ...payload
+        })
+      })
+      const data = await res.json()
+      web3Success = data.success === true
+      if (!web3Success) errorMsg = data.message || '提交失败'
+    } catch (err: any) {
+      errorMsg = err.message || '网络错误'
+    }
+    // Always save to localStorage as backup
+    const key = 'itin_submissions'
+    const existing = JSON.parse(localStorage.getItem(key) || '[]')
+    existing.push({ ...payload, web3Success, errorMsg, savedAt: new Date().toISOString() })
+    localStorage.setItem(key, JSON.stringify(existing))
+    setSubmitting(false)
+    setSubmitResult({ success: web3Success, error: errorMsg })
+    setDone(true)
   }
 
   // ---- 姓名转拼音 ----
@@ -209,10 +234,22 @@ export default function CollectPage() {
   if (done) return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✅</div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">提交成功！</h2>
-        <p className="text-muted mb-6">感谢您的配合，我们会尽快处理您的申请。</p>
-        <p className="text-sm text-muted">如有疑问，请联系您的专属顾问。</p>
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl ${submitResult.success ? 'bg-green-100' : 'bg-yellow-100'}`}>
+          {submitResult.success ? '✅' : '⚠️'}
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          {submitResult.success ? '提交成功！' : '已收到您的信息'}
+        </h2>
+        {submitResult.success ? (
+          <p className="text-gray-500 mb-6">感谢您的配合，我们会尽快处理您的申请。</p>
+        ) : (
+          <div className="mb-6">
+            <p className="text-gray-500 mb-2">您的信息已保存，但邮件通知发送失败。</p>
+            <p className="text-xs text-gray-400 bg-gray-50 p-2 rounded">错误：{submitResult.error || '未知错误'}</p>
+            <p className="text-sm text-gray-500 mt-2">请直接联系我们确认收到。</p>
+          </div>
+        )}
+        <p className="text-sm text-gray-400">如有疑问，请联系您的专属顾问。</p>
       </div>
     </div>
   )
